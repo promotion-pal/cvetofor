@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
 
-Widget buildNoInternetWidget({required VoidCallback onRetry}) {
+Widget buildNoInternetWidget({
+  required VoidCallback onRetry,
+  required String errorMsg,
+}) {
   return Center(
     child: Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         const Icon(Icons.wifi_off, size: 64, color: Colors.grey),
         const SizedBox(height: 16),
-        const Text(
-          'Нет подключения к интернету',
+        Text(
+          errorMsg,
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 8),
         Text(
           'Проверьте подключение и попробуйте снова',
           textAlign: TextAlign.center,
-          // style: TextStyle(color: Colors.grey[600]),
         ),
         const SizedBox(height: 20),
         ElevatedButton.icon(

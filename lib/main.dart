@@ -17,6 +17,7 @@ void main() => runApp(
     theme: AppTheme.lightTheme,
     home: const Cvetofor(),
     locale: const Locale('ru', 'RU'),
+    debugShowCheckedModeBanner: false,
   ),
 );
 
@@ -34,9 +35,10 @@ class _MainState extends State<Cvetofor> {
   int _currentIndex = 0;
   bool _isLoading = true;
   bool _hasError = false;
+  String _errorMsg = 'Нет подключения к интернету';
   bool _isOnline = true;
   int _cartItemCount = 0;
-  late StreamSubscription<ConnectivityResult> _connectivitySubscription;
+  late StreamSubscription<List<ConnectivityResult>> _connectivitySubscription;
 
   final List<String> _endpoints = ['', 'cart', 'profile'];
   final List<String> _pageTitles = ['Главная', 'Корзина', 'Профиль'];
@@ -60,9 +62,10 @@ class _MainState extends State<Cvetofor> {
 
   void _startConnectivityCheck() {
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
-      ConnectivityResult result,
+      List<ConnectivityResult> results,
     ) {
-      final isOnline = result != ConnectivityResult.none;
+      final isOnline =
+          results.isNotEmpty && results.first != ConnectivityResult.none;
       if (_isOnline != isOnline) {
         setState(() {
           _isOnline = isOnline;
@@ -94,22 +97,15 @@ class _MainState extends State<Cvetofor> {
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (String url) async {
-            print('onPageStarted $url');
-
             setState(() {
               _isLoading = true;
               _hasError = false;
             });
 
-            if (defaultTargetPlatform == TargetPlatform.android) {
-              await WebViewUtils.hideSiteUi(_webViewController);
-            }
             await WebViewUtils.acceptSiteCookies(_webViewController);
             await WebViewUtils.hideSiteCookieBanner(_webViewController);
           },
           onPageFinished: (String url) async {
-            print('onPageFinished $url');
-
             setState(() {
               _isLoading = false;
             });
@@ -120,19 +116,19 @@ class _MainState extends State<Cvetofor> {
               await WebViewUtils.hideSiteUi(_webViewController);
             }
 
+            await WebViewUtils.hideSiteUi(_webViewController);
             await WebViewUtils.injectCartListener(_webViewController);
             await CartUtils.injectCartCounterListener(_webViewController);
           },
           onWebResourceError: (WebResourceError error) {
-            print('onWebResourceError $error');
+            _handleWebResourceError(error);
+
             setState(() {
               _isLoading = false;
               _hasError = true;
             });
           },
           onUrlChange: (UrlChange urlChange) {
-            print('onUrlChange $urlChange');
-
             if (urlChange.url != null) {
               _updateNavigationIndex(urlChange.url!);
             }
@@ -150,11 +146,40 @@ class _MainState extends State<Cvetofor> {
     );
   }
 
+  void _handleWebResourceError(WebResourceError error) {
+    print('=== WEBVIEW ERROR DETAILS ===');
+    print('Error Type: ${error.runtimeType}');
+    print('Error Code: ${error.errorCode}');
+    print('Description: ${error.description}');
+    print('URL: ${error.url}');
+    print('=============================');
+
+    switch (error.errorCode) {
+      case -1:
+        _errorMsg = 'Произошла неизвестная ошибка';
+        break;
+
+      case -2:
+      case -1003:
+        _errorMsg = 'Проверьте подключение к интернету';
+        break;
+
+      case -1004:
+      case -6:
+        _errorMsg = 'Сервис временно недоступен. Ведутся технические работы.';
+        break;
+
+      case -10:
+      case -1002:
+        _errorMsg = 'Страница не найдена';
+        break;
+    }
+  }
+
   void _updateCartCount(int count) {
     setState(() {
       _cartItemCount = count;
     });
-    print('🔄 Обновлено количество товаров в корзине: $count');
   }
 
   void _showSearchDialog() {
@@ -229,16 +254,23 @@ class _MainState extends State<Cvetofor> {
   void _showCartNotification() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Товар добавлен в корзину 🛒'),
-        duration: Duration(seconds: 2),
+        content: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('Товар добавлен в корзину'),
+            const Icon(Icons.shopping_cart, color: Colors.white),
+          ],
+        ),
+        duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
     );
   }
 
   Widget _buildWebView() {
     if (!_isOnline || _hasError) {
-      return buildNoInternetWidget(onRetry: _reloadPage);
+      return buildNoInternetWidget(onRetry: _reloadPage, errorMsg: _errorMsg);
     }
 
     return Stack(
@@ -256,21 +288,21 @@ class _MainState extends State<Cvetofor> {
   Widget _buildCartIconWithBadge() {
     return Stack(
       children: [
-        Icon(Icons.shopping_cart_outlined),
+        const Icon(Icons.shopping_cart_outlined),
         if (_cartItemCount > 0)
           Positioned(
             right: 0,
             top: 0,
             child: Container(
-              padding: EdgeInsets.all(2),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
                 color: Colors.red,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.all(Radius.circular(10)),
               ),
-              constraints: BoxConstraints(minWidth: 16, minHeight: 16),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               child: Text(
                 _cartItemCount > 99 ? '99+' : '$_cartItemCount',
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
@@ -286,21 +318,21 @@ class _MainState extends State<Cvetofor> {
   Widget _buildCartSelectedIconWithBadge() {
     return Stack(
       children: [
-        Icon(Icons.shopping_cart),
+        const Icon(Icons.shopping_cart),
         if (_cartItemCount > 0)
           Positioned(
             right: 0,
             top: 0,
             child: Container(
-              padding: EdgeInsets.all(2),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
                 color: Colors.red,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.all(Radius.circular(10)),
               ),
-              constraints: BoxConstraints(minWidth: 16, minHeight: 16),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               child: Text(
                 _cartItemCount > 99 ? '99+' : '$_cartItemCount',
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
@@ -329,7 +361,7 @@ class _MainState extends State<Cvetofor> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(Icons.search),
+            icon: const Icon(Icons.search),
             onPressed: _showSearchDialog,
             tooltip: 'Поиск цветов',
           ),
@@ -340,7 +372,7 @@ class _MainState extends State<Cvetofor> {
         selectedIndex: _currentIndex,
         onDestinationSelected: _onNavigationItemTapped,
         destinations: [
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
             label: 'Главная',

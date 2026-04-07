@@ -1,9 +1,9 @@
 name: cvetofor
 description: "Цветофор - магазин цветов"
 
-publish_to: 'none' 
+publish_to: "none"
 
-version: 1.0.1+1
+version: 1.0.5+5
 
 environment:
   sdk: ^3.8.0
@@ -14,9 +14,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   webview_flutter: ^4.13.0
   webview_flutter_wkwebview: ^3.23.0
-  connectivity_plus: ^5.0.1
+  connectivity_plus: ^7.1.0
   url_launcher: ^6.3.2
-
+  fluttertoast: ^9.0.0
 
 dev_dependencies:
   flutter_test:
@@ -27,12 +27,12 @@ dev_dependencies:
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/icon/logo.png" 
-  adaptive_icon_background: "#FFFFFF" 
+  image_path: "assets/icon/logo.png"
+  adaptive_icon_background: "#FFFFFF"
   min_sdk_android: 21
 
 flutter:
   uses-material-design: true
 
   assets:
-  - assets/icon/logo.png
+    - assets/icon/logo.png
